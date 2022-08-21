@@ -1,0 +1,8 @@
+.ipynb_checkpoints
+__pycache__
+.polyaxon
+.polyaxonignore
+venv39
+dynunet_pipeline
+sample_img
+scripts/wandb

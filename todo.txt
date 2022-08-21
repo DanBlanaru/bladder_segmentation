@@ -1,0 +1,11 @@
+
+- make labels
+- remove 1_1_1 files
+
+- remove offset?
+- look at ctorg paper if img come in relevant groups
+- read another paper to see if isotropic img are problematic for dl
+- read about resampling
+- decide if to do resamplin straigth away
+- resample to x_x_y
+- cut pelvic region only 
