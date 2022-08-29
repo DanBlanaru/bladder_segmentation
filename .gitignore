@@ -4,5 +4,5 @@ __pycache__
 .polyaxonignore
 venv39
 dynunet_pipeline
-sample_img
+sample_folder
 scripts/wandb
