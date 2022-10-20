@@ -6,6 +6,7 @@ kind: experiment
 build:
   image: pytorch/pytorch:1.11.0-cuda11.3-cudnn8-runtime
   build_steps:
+  - python --version
   - pip install -r requirements.txt
 environment:
   resources:
@@ -13,4 +14,4 @@ environment:
       requests: 1
       limits: 1
 run:
-  cmd: python -u scripts/profile_dir.py
+  cmd: python -u scripts/resize_amos.py
