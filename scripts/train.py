@@ -1,3 +1,4 @@
+from monai.transforms.croppad.dictionary import DivisiblePadD
 import pytorch_lightning
 from monai.utils import set_determinism
 from monai.transforms import (
@@ -11,6 +12,7 @@ from monai.transforms import (
     ScaleIntensityRanged,
     Spacingd,
     EnsureType,
+    DivisiblePadd
 )
 from monai.networks.nets import UNet
 from monai.networks.layers import Norm
@@ -21,7 +23,6 @@ from monai.data import CacheDataset, list_data_collate, decollate_batch, DataLoa
 from monai.config import print_config
 from monai.apps import download_and_extract
 import torch
-import matplotlib.pyplot as plt
 import tempfile
 import shutil
 import os
@@ -37,8 +38,6 @@ print(root_dir)
 
 
 
-compressed_file = os.path.join(root_dir, "Task09_Spleen.tar")
-data_dir = os.path.join(root_dir, "Task09_Spleen")
 
 class Net(pytorch_lightning.LightningModule):
     def __init__(self):
@@ -72,11 +71,12 @@ class Net(pytorch_lightning.LightningModule):
                 LoadImaged(keys=["image", "label"]),
                 EnsureChannelFirstd(keys=["image", "label"]),
                 Orientationd(keys=["image", "label"], axcodes="RAS"),
-                Spacingd(
-                    keys=["image", "label"],
-                    pixdim=(1.5, 1.5, 2.0),
-                    mode=("bilinear", "nearest"),
-                ),
+                DivisiblePadd(["image", "label"], 16),
+                # Spacingd(
+                #     keys=["image", "label"],
+                #     pixdim=(1.5, 1.5, 2.0),
+                #     mode=("bilinear", "nearest"),
+                # ),
                 ScaleIntensityRanged(
                     keys=["image"], a_min=-57, a_max=164,
                     b_min=0.0, b_max=1.0, clip=True,
@@ -86,16 +86,16 @@ class Net(pytorch_lightning.LightningModule):
                 # big image based on pos / neg ratio
                 # the image centers of negative samples
                 # must be in valid image area
-                RandCropByPosNegLabeld(
-                    keys=["image", "label"],
-                    label_key="label",
-                    spatial_size=(96, 96, 96),
-                    pos=1,
-                    neg=1,
-                    num_samples=4,
-                    image_key="image",
-                    image_threshold=0,
-                ),
+                # RandCropByPosNegLabeld(
+                #     keys=["image", "label"],
+                #     label_key="label",
+                #     spatial_size=(96, 96, 96),
+                #     pos=1,
+                #     neg=1,
+                #     num_samples=4,
+                #     image_key="image",
+                #     image_threshold=0,
+                # ),
                 # user can also add other random transforms
                 #                 RandAffined(
                 #                     keys=['image', 'label'],
@@ -111,11 +111,12 @@ class Net(pytorch_lightning.LightningModule):
                 LoadImaged(keys=["image", "label"]),
                 EnsureChannelFirstd(keys=["image", "label"]),
                 Orientationd(keys=["image", "label"], axcodes="RAS"),
-                Spacingd(
-                    keys=["image", "label"],
-                    pixdim=(1.5, 1.5, 2.0),
-                    mode=("bilinear", "nearest"),
-                ),
+                DivisiblePadd(["image", "label"], 16),
+                # Spacingd(
+                #     keys=["image", "label"],
+                #     pixdim=(1.5, 1.5, 2.0),
+                #     mode=("bilinear", "nearest"),
+                # ),
                 ScaleIntensityRanged(
                     keys=["image"], a_min=-57, a_max=164,
                     b_min=0.0, b_max=1.0, clip=True,

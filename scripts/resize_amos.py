@@ -94,16 +94,11 @@ json_target_path = processed_dir + "task1_dataset.json"
 dataset_json = json.load(open(json_original_path))
 
 
-copy_json = True
-if copy_json:
-    dataset_json['labels'] = {
-        '0': 'background',
-        '1': 'bladder'
-    }
-    json.dump(dataset_json, open(json_target_path, 'w'))
+
 
 
 train_list = dataset_json['training']
+train_list_resampled = []
 resampled_size_list = []
 for filename_tuple in train_list:
     filename = filename_tuple['image'].split('/')[-1]
@@ -119,7 +114,9 @@ for filename_tuple in train_list:
         bladder_label_original, target_spacing, interpolator=sitk.sitkNearestNeighbor)
 
     if sitk.GetArrayFromImage(bladder_label_resized).sum() == 0:
-        continue  # skip images with no bladder voxels
+        print(filename_tuple, "WAS SKIPPED")
+        continue
+        # continue  # skip images with no bladder voxels
 
     sitk.WriteImage(img_resized, processed_tr_dir+filename)
     sitk.WriteImage(bladder_label_resized, processed_label_dir+filename)
@@ -128,9 +125,7 @@ for filename_tuple in train_list:
     print(filename)
     print(f"{bladder_label_original.GetSize()} -> {bladder_label_resized.GetSize()}")
     resampled_size_list.append(list(bladder_label_resized.GetSize()))
-    bladder_voxels_resized = sitk.GetArrayFromImage(
-        bladder_label_resized)
-    print(np.unique(bladder_voxels_resized,return_counts=True))
+    train_list_resampled.append(filename_tuple)
 
 
     if create_log:
@@ -166,7 +161,15 @@ for filename_tuple in train_list:
 print()
 print(np.min(np.array(resampled_size_list), axis=0))
 
-
+copy_json = True
+if copy_json:
+    dataset_json['labels'] = {
+        '0': 'background',
+        '1': 'bladder'
+    }
+    dataset_json['training'] = train_list_resampled
+    dataset_json['numTraining'] = len(train_list_resampled)
+    json.dump(dataset_json, open(json_target_path, 'w'))
 # todo:
 # load img and label side by side
 
