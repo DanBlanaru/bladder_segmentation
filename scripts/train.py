@@ -216,6 +216,7 @@ class Net(pytorch_lightning.LightningModule):
 
 # initialise the LightningModule
 net = Net()
+print("initialised network")
 
 # set up loggers and checkpoints
 log_dir = os.path.join(root_dir, "logs")
@@ -232,6 +233,6 @@ trainer = pytorch_lightning.Trainer(
     num_sanity_val_steps=1,
     log_every_n_steps=16,
 )
-
+print("initialised py-lightning")
 # train
 trainer.fit(net)
