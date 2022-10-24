@@ -76,16 +76,16 @@ processed_label_dir = processed_dir + "labelsTr/"
 
 raw_test_dir = raw_dir + "imagesTs/"
 
-csv_path = processed_dir+'resizing_logs_sample.csv'
+csv_path = processed_dir+'resizing_logs.csv'
 
 
-create_log = False
+create_log = True
 if create_log:
     csv_file = open(csv_path, 'w')
     original_header = "nr_voxels_original,bladder_voxels_original,bladder_voxels_ratio_original,original_shape"
     resized_header = "nr_voxels_resized,bladder_voxels_resized,bladder_voxels_ratio_resized,resized_shape"
     csv_file.write(f"filename,{original_header},{resized_header}\n")
-    print(os.path.exists(csv_path))
+    print(f"{csv_path},{'exists' if os.path.exists(csv_path) else 'didnt exist, created'}")
 
 
 json_original_path = raw_dir + "task1_dataset.json"
@@ -128,8 +128,10 @@ for filename_tuple in train_list:
     print(filename)
     print(f"{bladder_label_original.GetSize()} -> {bladder_label_resized.GetSize()}")
     resampled_size_list.append(list(bladder_label_resized.GetSize()))
+    bladder_voxels_resized = sitk.GetArrayFromImage(
+        bladder_label_resized)
+    print(np.unique(bladder_voxels_resized,return_counts=True))
 
-    # target_shape = (100,100,)
 
     if create_log:
         csv_file.write(filename+',')
@@ -147,6 +149,7 @@ for filename_tuple in train_list:
             f"{original_shape[0]};{original_shape[1]};{original_shape[2]},")
 
         nr_voxels_resized = np.prod(bladder_label_resized.GetSize())
+
         nr_bladder_voxels_resized = sitk.GetArrayFromImage(
             bladder_label_resized).sum()
         bladder_ratio_resized = nr_bladder_voxels_resized/nr_voxels_resized

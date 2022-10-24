@@ -63,10 +63,7 @@ class Net(pytorch_lightning.LightningModule):
         return self._model(x)
 
     def prepare_data(self):
-        # set up the correct data path
 
-
-        # set deterministic training for reproducibility
         set_determinism(seed=0)
 
         # define the data transforms
@@ -136,25 +133,24 @@ class Net(pytorch_lightning.LightningModule):
         #     data=val_files, transform=val_transforms,
         #     cache_rate=0.2, num_workers=4,
         # )
-        
-        
-        
-        train_images = sorted(
-            glob.glob(os.path.join(data_dir, "imagesTr", "*.nii.gz")))
-        train_labels = sorted(
-            glob.glob(os.path.join(data_dir, "labelsTr", "*.nii.gz")))
-        data_dicts = [
-            {"image": image_name, "label": label_name}
-            for image_name, label_name in zip(train_images, train_labels)
-        ]
-        train_files, val_files = data_dicts[:-9], data_dicts[-9:]
 
-        self.train_ds = Dataset(
-            data=train_files, transform=train_transforms)
-        self.val_ds = Dataset(
-            data=val_files, transform=val_transforms)
+        # train_images = sorted(
+        #     glob.glob(os.path.join(data_dir, "imagesTr", "*.nii.gz")))
+        # train_labels = sorted(
+        #     glob.glob(os.path.join(data_dir, "labelsTr", "*.nii.gz")))
+        # data_dicts = [
+        #     {"image": image_name, "label": label_name}
+        #     for image_name, label_name in zip(train_images, train_labels)
+        # ]
+        # train_files, val_files = data_dicts[:-9], data_dicts[-9:]
 
-        self.train_ds = AMOSDataset()
+        # self.train_ds = Dataset(
+        #     data=train_files, transform=train_transforms)
+        # self.val_ds = Dataset(
+        #     data=val_files, transform=val_transforms)
+
+        self.train_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=train_transforms,train_size=8,is_val=False)
+        self.val_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=train_transforms,train_size=8,is_val=False)
 
     def train_dataloader(self):
         train_loader = DataLoader(
@@ -216,3 +212,26 @@ class Net(pytorch_lightning.LightningModule):
             f"at epoch: {self.best_val_epoch}"
         )
         return {"log": tensorboard_logs}
+
+
+# initialise the LightningModule
+net = Net()
+
+# set up loggers and checkpoints
+log_dir = os.path.join(root_dir, "logs")
+tb_logger = pytorch_lightning.loggers.TensorBoardLogger(
+    save_dir=log_dir
+)
+
+# initialise Lightning's trainer.
+trainer = pytorch_lightning.Trainer(
+    gpus=[0],
+    max_epochs=600,
+    logger=tb_logger,
+    enable_checkpointing=True,
+    num_sanity_val_steps=1,
+    log_every_n_steps=16,
+)
+
+# train
+trainer.fit(net)

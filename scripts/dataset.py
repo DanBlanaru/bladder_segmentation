@@ -9,16 +9,23 @@ import SimpleITK as sitk
 class AMOSDataset(Dataset):
     """AMOS dataset."""
 
-    def __init__(self, json_path = "task1_dataset.json", root_dir = "E://Guided Research/AMOS22/", transform=None):
+    def __init__(self, json_path = "task1_dataset.json", root_dir = "E://Guided Research/AMOS22/", transform=None, train_size = 160, is_val = False):
         """
         Args:
             json_path (string): Path to the json file specifying (img,label) pairs and some metadata.
             root_dir (string): Directory with the dateset.
             transform (callable, optional): Optional transform to be applied
                 on a sample.
+            train_size (int): how many images to use. If is_val is False, it will use the first train_size images as train. If is_val is True the last train_size images are used
+            is_val (bool): if this is the training or the validation dataset.
         """
         self.json_file = json.load(open(json_path,'r'))
-        self.training_list = self.json_file['training']
+        if is_val:
+            # list of validation images
+            self.training_list = self.json_file['training'][train_size:]      
+        else:
+            # list of training images
+            self.training_list = self.json_file['training'][:train_size]
         self.root_dir = root_dir
         self.transform = transform
 
