@@ -1,6 +1,6 @@
 from monai.transforms.croppad.dictionary import DivisiblePadD
 import pytorch_lightning
-from pytorch_lightning.loggers import WandBLogger
+from pytorch_lightning.loggers import WandbLogger
 from monai.utils import set_determinism
 from monai.transforms import (
     AsDiscrete,
@@ -30,8 +30,8 @@ import os
 import glob
 from dataset import AMOSDataset
 
-print('running')
 
+print_config()
 
 root_dir = ("/data/dan_blanaru/AMOS22_preprocessed/")
 makeshift_log = open(os.path.join(root_dir,'makeshift_log.csv'),'w')
@@ -228,7 +228,6 @@ class Net(pytorch_lightning.LightningModule):
 
 # initialise the LightningModule
 net = Net()
-print("initialised network")
 
 # set up loggers and checkpoints
 log_dir = os.path.join(root_dir, "logs")
@@ -246,6 +245,5 @@ trainer = pytorch_lightning.Trainer(
     num_sanity_val_steps=1,
     # log_every_n_steps=10,
 )
-print("initialised py-lightning")
 # train
 trainer.fit(net)

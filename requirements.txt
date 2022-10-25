@@ -22,7 +22,7 @@ Jinja2==2.10.3
 Markdown==3.4.1
 # MarkupSafe
 marshmallow==3.0.0rc5
-monai==0.9.1
+monai
 multidict==6.0.2
 nibabel==4.0.2
 numpy==1.23.3
@@ -71,6 +71,7 @@ Unipath==1.1
 urllib3==1.26.12
 websocket-client==1.4.1
 Werkzeug==2.2.2
+wandb==0.13.4
 yarl==1.8.1
 zipp==3.10.0
 --extra-index-url https://download.pytorch.org/whl/cu113
