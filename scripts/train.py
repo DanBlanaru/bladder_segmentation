@@ -1,5 +1,6 @@
 from monai.transforms.croppad.dictionary import DivisiblePadD
 import pytorch_lightning
+from pytorch_lightning.loggers import WandBLogger
 from monai.utils import set_determinism
 from monai.transforms import (
     AsDiscrete,
@@ -31,9 +32,10 @@ from dataset import AMOSDataset
 
 print('running')
 
-print_config()
 
-root_dir = ("E:\\Guided Research\\AMOS22")
+root_dir = ("/data/dan_blanaru/AMOS22_preprocessed/")
+makeshift_log = open(os.path.join(root_dir,'makeshift_log.csv'),'w')
+
 print(root_dir)
 
 
@@ -134,35 +136,35 @@ class Net(pytorch_lightning.LightningModule):
         #     data=val_files, transform=val_transforms,
         #     cache_rate=0.2, num_workers=4,
         # )
+        data_dir ="/data/dan_blanaru/AMOS22_preprocessed/"
+        train_images = sorted(
+            glob.glob(os.path.join(data_dir, "imagesTr", "*.nii.gz")))
+        train_labels = sorted(
+            glob.glob(os.path.join(data_dir, "labelsTr", "*.nii.gz")))
+        data_dicts = [
+            {"image": image_name, "label": label_name}
+            for image_name, label_name in zip(train_images, train_labels)
+        ]
+        train_files, val_files = data_dicts[:48], data_dicts[48:50]
 
-        # train_images = sorted(
-        #     glob.glob(os.path.join(data_dir, "imagesTr", "*.nii.gz")))
-        # train_labels = sorted(
-        #     glob.glob(os.path.join(data_dir, "labelsTr", "*.nii.gz")))
-        # data_dicts = [
-        #     {"image": image_name, "label": label_name}
-        #     for image_name, label_name in zip(train_images, train_labels)
-        # ]
-        # train_files, val_files = data_dicts[:-9], data_dicts[-9:]
+        self.train_ds = Dataset(
+            data=train_files, transform=train_transforms)
+        self.val_ds = Dataset(
+            data=val_files, transform=val_transforms)
 
-        # self.train_ds = Dataset(
-        #     data=train_files, transform=train_transforms)
-        # self.val_ds = Dataset(
-        #     data=val_files, transform=val_transforms)
-
-        self.train_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=train_transforms,train_size=8,is_val=False)
-        self.val_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=train_transforms,train_size=8,is_val=False)
+        # self.train_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=train_transforms,train_size=8,is_val=False)
+        # self.val_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=val_transforms,train_size=8,is_val=True)
 
     def train_dataloader(self):
         train_loader = DataLoader(
             self.train_ds, batch_size=1, shuffle=True,
-            num_workers=4, collate_fn=list_data_collate,
+            num_workers=1, collate_fn=list_data_collate,
         )
         return train_loader
 
     def val_dataloader(self):
         val_loader = DataLoader(
-            self.val_ds, batch_size=1, num_workers=4)
+            self.val_ds, batch_size=1, num_workers=1)
         return val_loader
 
     def configure_optimizers(self):
@@ -170,12 +172,19 @@ class Net(pytorch_lightning.LightningModule):
         return optimizer
 
     def training_step(self, batch, batch_idx):
+        
         images, labels = batch["image"], batch["label"]
+        
+        # print("________________________________________GETS PRINTED HERE________________________________________________")
         output = self.forward(images)
         loss = self.loss_function(output, labels)
+        
+        # print("________________________________________GETS PRINTED HERE________________________________________________")
         print("train: ",loss)
+        makeshift_log.write("train, "+str(loss.item())+",\n")
         
         tensorboard_logs = {"train_loss": loss.item()}
+        
         return {"loss": loss, "log": tensorboard_logs}
 
     def validation_step(self, batch, batch_idx):
@@ -185,7 +194,7 @@ class Net(pytorch_lightning.LightningModule):
         outputs = sliding_window_inference(
             images, roi_size, sw_batch_size, self.forward)
         loss = self.loss_function(outputs, labels)
-        print(loss)
+        print("val loss",loss)
         outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
         labels = [self.post_label(i) for i in decollate_batch(labels)]
         self.dice_metric(y_pred=outputs, y=labels)
@@ -212,6 +221,8 @@ class Net(pytorch_lightning.LightningModule):
             f"\nbest mean dice: {self.best_val_dice:.4f} "
             f"at epoch: {self.best_val_epoch}"
         )
+        makeshift_log.write("val_loss,"+str(mean_val_loss)+",\n")
+        makeshift_log.write("val_dice,"+str(mean_val_dice)+",\n")
         return {"log": tensorboard_logs}
 
 
@@ -221,18 +232,19 @@ print("initialised network")
 
 # set up loggers and checkpoints
 log_dir = os.path.join(root_dir, "logs")
+print("LOGDIR:", log_dir, os.path.exists(log_dir))
 tb_logger = pytorch_lightning.loggers.TensorBoardLogger(
     save_dir=log_dir
 )
-
+tb_logger.log_graph(net)
 # initialise Lightning's trainer.
 trainer = pytorch_lightning.Trainer(
     gpus=[0],
-    max_epochs=600,
+    max_epochs=30,
     logger=tb_logger,
-    enable_checkpointing=True,
+    enable_checkpointing=False,
     num_sanity_val_steps=1,
-    log_every_n_steps=16,
+    # log_every_n_steps=10,
 )
 print("initialised py-lightning")
 # train

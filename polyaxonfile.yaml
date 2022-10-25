@@ -14,4 +14,4 @@ environment:
       requests: 1
       limits: 1
 run:
-  cmd: python -u scripts/create_toy_json.py
+  cmd: python -u scripts/train.py

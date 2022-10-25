@@ -19,6 +19,7 @@ class AMOSDataset(Dataset):
             train_size (int): how many images to use. If is_val is False, it will use the first train_size images as train. If is_val is True the last train_size images are used
             is_val (bool): if this is the training or the validation dataset.
         """
+        self.is_val = is_val
         json_full_path = os.path.join(root_dir,json_path)
         self.json_file = json.load(open(json_full_path,'r'))
         if is_val:
@@ -36,7 +37,6 @@ class AMOSDataset(Dataset):
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()
-        print("INDEEEXXXXXX::",idx)
         img_label_pair = self.training_list[idx]
 
         img_name = os.path.join(self.root_dir,
@@ -49,8 +49,8 @@ class AMOSDataset(Dataset):
 
 
         sample = {'image': img_name, 'label': label_name}
-
+        print(f'before {"eval" if self.is_val else "train"} transform')
         if self.transform:
             sample = self.transform(sample)
-
+        print(f'after {"eval" if self.is_val else "train"} transform')
         return sample
