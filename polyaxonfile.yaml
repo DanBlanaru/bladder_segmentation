@@ -14,4 +14,6 @@ environment:
       requests: 1
       limits: 1
 run:
-  cmd: python -u scripts/train.py
+  cmd:
+  - python -u scripts/wandb_login.py
+  - python -u scripts/train.py

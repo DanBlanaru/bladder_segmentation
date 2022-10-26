@@ -20,7 +20,7 @@ from monai.networks.layers import Norm
 from monai.metrics import DiceMetric
 from monai.losses import DiceLoss
 from monai.inferers import sliding_window_inference
-from monai.data import CacheDataset, list_data_collate, decollate_batch, DataLoader, Dataset
+from monai.data import CacheDataset, list_data_collate, decollate_batch, DataLoader, Dataset, pad_list_data_collate
 from monai.config import print_config
 from monai.apps import download_and_extract
 import torch
@@ -127,15 +127,7 @@ class Net(pytorch_lightning.LightningModule):
             ]
         )
 
-        # we use cached datasets - these are 10x faster than regular datasets
-        # self.train_ds = CacheDataset(
-        #     data=train_files, transform=train_transforms,
-        #     cache_rate=0.2, num_workers=4,
-        # )
-        # self.val_ds = CacheDataset(
-        #     data=val_files, transform=val_transforms,
-        #     cache_rate=0.2, num_workers=4,
-        # )
+
         data_dir ="/data/dan_blanaru/AMOS22_preprocessed/"
         train_images = sorted(
             glob.glob(os.path.join(data_dir, "imagesTr", "*.nii.gz")))
@@ -145,7 +137,17 @@ class Net(pytorch_lightning.LightningModule):
             {"image": image_name, "label": label_name}
             for image_name, label_name in zip(train_images, train_labels)
         ]
-        train_files, val_files = data_dicts[:48], data_dicts[48:50]
+        train_files, val_files = data_dicts[:160], data_dicts[160:]
+
+        # we use cached datasets - these are 10x faster than regular datasets
+        # self.train_ds = CacheDataset(
+        #     data=train_files, transform=train_transforms,
+        #     cache_rate=0.2, num_workers=4,
+        # )
+        # self.val_ds = CacheDataset(
+        #     data=val_files, transform=val_transforms,
+        #     cache_rate=0.2, num_workers=4,
+        # )
 
         self.train_ds = Dataset(
             data=train_files, transform=train_transforms)
@@ -157,14 +159,14 @@ class Net(pytorch_lightning.LightningModule):
 
     def train_dataloader(self):
         train_loader = DataLoader(
-            self.train_ds, batch_size=1, shuffle=True,
-            num_workers=1, collate_fn=list_data_collate,
+            self.train_ds, batch_size=4, shuffle=True,
+            num_workers=4, collate_fn=pad_list_data_collate,
         )
         return train_loader
 
     def val_dataloader(self):
         val_loader = DataLoader(
-            self.val_ds, batch_size=1, num_workers=1)
+            self.val_ds, batch_size=1, num_workers=2)
         return val_loader
 
     def configure_optimizers(self):
@@ -175,16 +177,14 @@ class Net(pytorch_lightning.LightningModule):
         
         images, labels = batch["image"], batch["label"]
         
-        # print("________________________________________GETS PRINTED HERE________________________________________________")
         output = self.forward(images)
         loss = self.loss_function(output, labels)
         
-        # print("________________________________________GETS PRINTED HERE________________________________________________")
         print("train: ",loss)
         makeshift_log.write("train, "+str(loss.item())+",\n")
         
         tensorboard_logs = {"train_loss": loss.item()}
-        
+        self.log("train_loss", loss.item())
         return {"loss": loss, "log": tensorboard_logs}
 
     def validation_step(self, batch, batch_idx):
@@ -195,6 +195,7 @@ class Net(pytorch_lightning.LightningModule):
             images, roi_size, sw_batch_size, self.forward)
         loss = self.loss_function(outputs, labels)
         print("val loss",loss)
+        self.log("val_loss",loss)
         outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
         labels = [self.post_label(i) for i in decollate_batch(labels)]
         self.dice_metric(y_pred=outputs, y=labels)
@@ -221,9 +222,12 @@ class Net(pytorch_lightning.LightningModule):
             f"\nbest mean dice: {self.best_val_dice:.4f} "
             f"at epoch: {self.best_val_epoch}"
         )
+        self.log("val_dice", mean_val_dice)
+        self.log("val_loss", mean_val_loss)
         makeshift_log.write("val_loss,"+str(mean_val_loss)+",\n")
         makeshift_log.write("val_dice,"+str(mean_val_dice)+",\n")
         return {"log": tensorboard_logs}
+
 
 
 # initialise the LightningModule
@@ -232,18 +236,26 @@ net = Net()
 # set up loggers and checkpoints
 log_dir = os.path.join(root_dir, "logs")
 print("LOGDIR:", log_dir, os.path.exists(log_dir))
-tb_logger = pytorch_lightning.loggers.TensorBoardLogger(
-    save_dir=log_dir
+wandb_logger = WandbLogger(
+    project="GR_AMOS"
 )
-tb_logger.log_graph(net)
+
+wandb_logger.experiment.config["key"] = "value"
+
+# add multiple parameters
+wandb_logger.experiment.config.update({'a': 123, 'b': 235})
+
+
+
 # initialise Lightning's trainer.
+
 trainer = pytorch_lightning.Trainer(
     gpus=[0],
-    max_epochs=30,
-    logger=tb_logger,
-    enable_checkpointing=False,
+    max_epochs=150,
+    logger=wandb_logger,
+    enable_checkpointing=True,
     num_sanity_val_steps=1,
-    # log_every_n_steps=10,
+    log_every_n_steps=10,
 )
 # train
 trainer.fit(net)
