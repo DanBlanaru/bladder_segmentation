@@ -41,8 +41,8 @@ print(root_dir)
 
 
 hparams = {
-    "max_epochs":150,
-    "batch_size":4,
+    "max_epochs":200,
+    "batch_size":1,
     "lr" : 1e-4,
     "using_rand_crop" : False,
 
@@ -152,19 +152,19 @@ class Net(pytorch_lightning.LightningModule):
         train_files, val_files = data_dicts[:160], data_dicts[160:]
 
         # we use cached datasets - these are 10x faster than regular datasets
-        # self.train_ds = CacheDataset(
-        #     data=train_files, transform=train_transforms,
-        #     cache_rate=1, num_workers=4,
-        # )
-        # self.val_ds = CacheDataset(
-        #     data=val_files, transform=val_transforms,
-        #     cache_rate=1, num_workers=4,
-        # )
+        self.train_ds = CacheDataset(
+            data=train_files, transform=train_transforms,
+            cache_rate=1, num_workers=4,
+        )
+        self.val_ds = CacheDataset(
+            data=val_files, transform=val_transforms,
+            cache_rate=1, num_workers=4,
+        )
 
-        self.train_ds = Dataset(
-            data=train_files, transform=train_transforms)
-        self.val_ds = Dataset(
-            data=val_files, transform=val_transforms)
+        # self.train_ds = Dataset(
+        #     data=train_files, transform=train_transforms)
+        # self.val_ds = Dataset(
+        #     data=val_files, transform=val_transforms)
 
         # self.train_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=train_transforms,train_size=8,is_val=False)
         # self.val_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=val_transforms,train_size=8,is_val=True)
@@ -178,7 +178,7 @@ class Net(pytorch_lightning.LightningModule):
 
     def val_dataloader(self):
         val_loader = DataLoader(
-            self.val_ds, batch_size=self.batch_size, num_workers=2,
+            self.val_ds, batch_size=self.batch_size, num_workers=4,
             collate_fn=pad_list_data_collate)
         return val_loader
 
@@ -190,29 +190,38 @@ class Net(pytorch_lightning.LightningModule):
         
         images, labels = batch["image"], batch["label"]
         
-        output = self.forward(images)
-        loss = self.loss_function(output, labels)
-        
-        print("train: ",loss)
-        makeshift_log.write("train, "+str(loss.item())+",\n")
+        outputs = self.forward(images)
+        loss = self.loss_function(outputs, labels)
+
+        outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
+        labels = [self.post_label(i) for i in decollate_batch(labels)]
+        self.dice_metric(y_pred = outputs,y = labels)
+
+        mean_dice = self.dice_metric.aggregate().item()
+        self.dice_metric.reset()
         
         tensorboard_logs = {"train_loss": loss.item()}
+        self.log("train_dice", mean_dice)
         self.log("train_loss", loss.item())
         return {"loss": loss, "log": tensorboard_logs}
 
-    def training_epoch_end(self, outputs):
-        train_loss, num_items = 0,0
-        for output in outputs:
-            pass
+    # def training_epoch_end(self, outputs):
+    #     train_loss, num_items = 0,0
+    #     mean_train_dice = self.dice_metric.aggregate().item()
+    #     self.dice_metric.reset()
+    #     self.log()
+    #     for output in outputs:
+    #         pass
 
     def validation_step(self, batch, batch_idx):
         images, labels = batch["image"], batch["label"]
-        roi_size = (160, 160, 160)
-        sw_batch_size = 4
-        outputs = sliding_window_inference(
-            images, roi_size, sw_batch_size, self.forward)
+        # roi_size = (160, 160, 160)
+        # sw_batch_size = 4
+        # outputs = sliding_window_inference(
+        #     images, roi_size, sw_batch_size, self.forward)
+        outputs = self.forward(images)
         loss = self.loss_function(outputs, labels)
-        print("val loss",loss)
+        # print("val loss",loss)
         self.log("val_loss",loss)
         outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
         labels = [self.post_label(i) for i in decollate_batch(labels)]
