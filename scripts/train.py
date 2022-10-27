@@ -41,7 +41,7 @@ print(root_dir)
 
 
 hparams = {
-    "max_epochs":200,
+    "max_epochs":150,
     "batch_size":4,
     "lr" : 1e-4,
     "using_rand_crop" : False,
@@ -152,19 +152,19 @@ class Net(pytorch_lightning.LightningModule):
         train_files, val_files = data_dicts[:160], data_dicts[160:]
 
         # we use cached datasets - these are 10x faster than regular datasets
-        self.train_ds = CacheDataset(
-            data=train_files, transform=train_transforms,
-            cache_rate=1, num_workers=4,
-        )
-        self.val_ds = CacheDataset(
-            data=val_files, transform=val_transforms,
-            cache_rate=1, num_workers=4,
-        )
+        # self.train_ds = CacheDataset(
+        #     data=train_files, transform=train_transforms,
+        #     cache_rate=1, num_workers=4,
+        # )
+        # self.val_ds = CacheDataset(
+        #     data=val_files, transform=val_transforms,
+        #     cache_rate=1, num_workers=4,
+        # )
 
-        # self.train_ds = Dataset(
-        #     data=train_files, transform=train_transforms)
-        # self.val_ds = Dataset(
-        #     data=val_files, transform=val_transforms)
+        self.train_ds = Dataset(
+            data=train_files, transform=train_transforms)
+        self.val_ds = Dataset(
+            data=val_files, transform=val_transforms)
 
         # self.train_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=train_transforms,train_size=8,is_val=False)
         # self.val_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=val_transforms,train_size=8,is_val=True)
@@ -199,6 +199,11 @@ class Net(pytorch_lightning.LightningModule):
         tensorboard_logs = {"train_loss": loss.item()}
         self.log("train_loss", loss.item())
         return {"loss": loss, "log": tensorboard_logs}
+
+    def training_epoch_end(self, outputs):
+        train_loss, num_items = 0,0
+        for output in outputs:
+            pass
 
     def validation_step(self, batch, batch_idx):
         images, labels = batch["image"], batch["label"]
@@ -237,8 +242,11 @@ class Net(pytorch_lightning.LightningModule):
         )
         self.log("val_dice", mean_val_dice)
         self.log("val_loss", mean_val_loss)
-        makeshift_log.write("val_loss,"+str(mean_val_loss)+",\n")
-        makeshift_log.write("val_dice,"+str(mean_val_dice)+",\n")
+        # makeshift_log.write("val_loss,"+str(mean_val_loss)+",\n")
+        # makeshift_log.write("val_dice,"+str(mean_val_dice)+",\n")
+        #put images here
+
+        #put images here
         return {"log": tensorboard_logs}
 
 
