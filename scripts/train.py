@@ -1,5 +1,6 @@
 from monai.transforms.croppad.dictionary import DivisiblePadD
 import pytorch_lightning
+from pytorch_lightning.callbacks import ModelCheckpoint, checkpoint
 from pytorch_lightning.loggers import WandbLogger
 from monai.utils import set_determinism
 from monai.transforms import (
@@ -39,10 +40,16 @@ makeshift_log = open(os.path.join(root_dir,'makeshift_log.csv'),'w')
 print(root_dir)
 
 
+hparams = {
+    "max_epochs":200,
+    "batch_size":4,
+    "lr" : 1e-4,
+    "using_rand_crop" : False,
 
+}
 
 class Net(pytorch_lightning.LightningModule):
-    def __init__(self):
+    def __init__(self,max_epochs,batch_size,lr,using_rand_crop):
         super().__init__()
         self._model = UNet(
             spatial_dims=3,
@@ -59,6 +66,11 @@ class Net(pytorch_lightning.LightningModule):
         self.dice_metric = DiceMetric(include_background=False, reduction="mean", get_not_nans=False)
         self.best_val_dice = 0
         self.best_val_epoch = 0
+        self.max_epochs = max_epochs
+        self.batch_size = batch_size
+        self.lr = lr
+        self.using_rand_crop = using_rand_crop
+        self.save_hyperparameters()
 
     def forward(self, x):
         return self._model(x)
@@ -140,37 +152,38 @@ class Net(pytorch_lightning.LightningModule):
         train_files, val_files = data_dicts[:160], data_dicts[160:]
 
         # we use cached datasets - these are 10x faster than regular datasets
-        # self.train_ds = CacheDataset(
-        #     data=train_files, transform=train_transforms,
-        #     cache_rate=0.2, num_workers=4,
-        # )
-        # self.val_ds = CacheDataset(
-        #     data=val_files, transform=val_transforms,
-        #     cache_rate=0.2, num_workers=4,
-        # )
+        self.train_ds = CacheDataset(
+            data=train_files, transform=train_transforms,
+            cache_rate=1, num_workers=4,
+        )
+        self.val_ds = CacheDataset(
+            data=val_files, transform=val_transforms,
+            cache_rate=1, num_workers=4,
+        )
 
-        self.train_ds = Dataset(
-            data=train_files, transform=train_transforms)
-        self.val_ds = Dataset(
-            data=val_files, transform=val_transforms)
+        # self.train_ds = Dataset(
+        #     data=train_files, transform=train_transforms)
+        # self.val_ds = Dataset(
+        #     data=val_files, transform=val_transforms)
 
         # self.train_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=train_transforms,train_size=8,is_val=False)
         # self.val_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=val_transforms,train_size=8,is_val=True)
 
     def train_dataloader(self):
         train_loader = DataLoader(
-            self.train_ds, batch_size=4, shuffle=True,
+            self.train_ds, batch_size=self.batch_size, shuffle=True,
             num_workers=4, collate_fn=pad_list_data_collate,
         )
         return train_loader
 
     def val_dataloader(self):
         val_loader = DataLoader(
-            self.val_ds, batch_size=1, num_workers=2)
+            self.val_ds, batch_size=self.batch_size, num_workers=2,
+            collate_fn=pad_list_data_collate)
         return val_loader
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self._model.parameters(), 1e-4)
+        optimizer = torch.optim.Adam(self._model.parameters(), self.lr)
         return optimizer
 
     def training_step(self, batch, batch_idx):
@@ -231,7 +244,7 @@ class Net(pytorch_lightning.LightningModule):
 
 
 # initialise the LightningModule
-net = Net()
+net = Net(**hparams)
 
 # set up loggers and checkpoints
 log_dir = os.path.join(root_dir, "logs")
@@ -240,22 +253,24 @@ wandb_logger = WandbLogger(
     project="GR_AMOS"
 )
 
-wandb_logger.experiment.config["key"] = "value"
 
 # add multiple parameters
-wandb_logger.experiment.config.update({'a': 123, 'b': 235})
+wandb_logger.experiment.config.update(hparams)
 
-
+checkpoint_dir = os.path.join(root_dir,"checkpoints")
+val_loss_checkpoint = ModelCheckpoint(save_top_k=3, monitor="val_loss",every_n_epochs=2, dirpath=checkpoint_dir, filename="AMOS_{epoch:02d}_{global_step}_{val_loss}")
+val_dice_checkpoint = ModelCheckpoint(save_top_k=3, monitor="val_loss",every_n_epochs=2, dirpath=checkpoint_dir, filename="AMOS_{epoch:02d}_{global_step}_{val_dice}")
 
 # initialise Lightning's trainer.
 
 trainer = pytorch_lightning.Trainer(
     gpus=[0],
-    max_epochs=150,
+    max_epochs=hparams["max_epochs"],
     logger=wandb_logger,
     enable_checkpointing=True,
     num_sanity_val_steps=1,
     log_every_n_steps=10,
+    callbacks=[val_dice_checkpoint,val_loss_checkpoint]
 )
 # train
 trainer.fit(net)
