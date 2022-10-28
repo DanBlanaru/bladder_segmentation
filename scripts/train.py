@@ -42,7 +42,7 @@ print(root_dir)
 
 hparams = {
     "max_epochs":200,
-    "batch_size":1,
+    "batch_size":4,
     "lr" : 1e-4,
     "using_rand_crop" : False,
 
@@ -178,7 +178,7 @@ class Net(pytorch_lightning.LightningModule):
 
     def val_dataloader(self):
         val_loader = DataLoader(
-            self.val_ds, batch_size=self.batch_size, num_workers=4,
+            self.val_ds, batch_size=self.batch_size, num_workers=2,
             collate_fn=pad_list_data_collate)
         return val_loader
 
@@ -190,38 +190,24 @@ class Net(pytorch_lightning.LightningModule):
         
         images, labels = batch["image"], batch["label"]
         
-        outputs = self.forward(images)
-        loss = self.loss_function(outputs, labels)
-
-        outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
-        labels = [self.post_label(i) for i in decollate_batch(labels)]
-        self.dice_metric(y_pred = outputs,y = labels)
-
-        mean_dice = self.dice_metric.aggregate().item()
-        self.dice_metric.reset()
+        output = self.forward(images)
+        loss = self.loss_function(output, labels)
+        
+        print("train: ",loss)
+        makeshift_log.write("train, "+str(loss.item())+",\n")
         
         tensorboard_logs = {"train_loss": loss.item()}
-        self.log("train_dice", mean_dice)
         self.log("train_loss", loss.item())
         return {"loss": loss, "log": tensorboard_logs}
 
-    # def training_epoch_end(self, outputs):
-    #     train_loss, num_items = 0,0
-    #     mean_train_dice = self.dice_metric.aggregate().item()
-    #     self.dice_metric.reset()
-    #     self.log()
-    #     for output in outputs:
-    #         pass
-
     def validation_step(self, batch, batch_idx):
         images, labels = batch["image"], batch["label"]
-        # roi_size = (160, 160, 160)
-        # sw_batch_size = 4
-        # outputs = sliding_window_inference(
-        #     images, roi_size, sw_batch_size, self.forward)
-        outputs = self.forward(images)
+        roi_size = (160, 160, 160)
+        sw_batch_size = 4
+        outputs = sliding_window_inference(
+            images, roi_size, sw_batch_size, self.forward)
         loss = self.loss_function(outputs, labels)
-        # print("val loss",loss)
+        print("val loss",loss)
         self.log("val_loss",loss)
         outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
         labels = [self.post_label(i) for i in decollate_batch(labels)]
@@ -251,11 +237,8 @@ class Net(pytorch_lightning.LightningModule):
         )
         self.log("val_dice", mean_val_dice)
         self.log("val_loss", mean_val_loss)
-        # makeshift_log.write("val_loss,"+str(mean_val_loss)+",\n")
-        # makeshift_log.write("val_dice,"+str(mean_val_dice)+",\n")
-        #put images here
-
-        #put images here
+        makeshift_log.write("val_loss,"+str(mean_val_loss)+",\n")
+        makeshift_log.write("val_dice,"+str(mean_val_dice)+",\n")
         return {"log": tensorboard_logs}
 
 
