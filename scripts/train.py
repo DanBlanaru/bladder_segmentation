@@ -152,19 +152,19 @@ class Net(pytorch_lightning.LightningModule):
         train_files, val_files = data_dicts[:160], data_dicts[160:]
 
         # we use cached datasets - these are 10x faster than regular datasets
-        self.train_ds = CacheDataset(
-            data=train_files, transform=train_transforms,
-            cache_rate=1, num_workers=4,
-        )
-        self.val_ds = CacheDataset(
-            data=val_files, transform=val_transforms,
-            cache_rate=1, num_workers=4,
-        )
+        # self.train_ds = CacheDataset(
+        #     data=train_files, transform=train_transforms,
+        #     cache_rate=1, num_workers=4,
+        # )
+        # self.val_ds = CacheDataset(
+        #     data=val_files, transform=val_transforms,
+        #     cache_rate=1, num_workers=4,
+        # )
 
-        # self.train_ds = Dataset(
-        #     data=train_files, transform=train_transforms)
-        # self.val_ds = Dataset(
-        #     data=val_files, transform=val_transforms)
+        self.train_ds = Dataset(
+            data=train_files, transform=train_transforms)
+        self.val_ds = Dataset(
+            data=val_files, transform=val_transforms)
 
         # self.train_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=train_transforms,train_size=8,is_val=False)
         # self.val_ds = AMOSDataset(json_path="toy_dataset.json",root_dir="/data/dan_blanaru/AMOS22_preprocessed/", transform=val_transforms,train_size=8,is_val=True)
@@ -273,4 +273,6 @@ trainer = pytorch_lightning.Trainer(
     callbacks=[val_dice_checkpoint,val_loss_checkpoint]
 )
 # train
+# print(net._model)
+os.system("nvidia-smi")
 trainer.fit(net)
