@@ -192,20 +192,28 @@ class Net(pytorch_lightning.LightningModule):
         
         output = self.forward(images)
         loss = self.loss_function(output, labels)
-        
-        print("train: ",loss)
-        makeshift_log.write("train, "+str(loss.item())+",\n")
+
+        outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
+        labels = [self.post_label(i) for i in decollate_batch(labels)]
+        self.dice_metric(y_pred = outputs,y = labels)
+        mean_dice = self.dice_metric.aggregate().item()
+        self.dice_metric.reset()
         
         tensorboard_logs = {"train_loss": loss.item()}
+        self.log("train_dice", mean_dice)
         self.log("train_loss", loss.item())
+        print("train: ",loss)
+        # makeshift_log.write("train, "+str(loss.item())+",\n")
+        
         return {"loss": loss, "log": tensorboard_logs}
 
     def validation_step(self, batch, batch_idx):
         images, labels = batch["image"], batch["label"]
-        roi_size = (160, 160, 160)
-        sw_batch_size = 4
-        outputs = sliding_window_inference(
-            images, roi_size, sw_batch_size, self.forward)
+        # roi_size = (160, 160, 160)
+        # sw_batch_size = 4
+        # outputs = sliding_window_inference(
+        #     images, roi_size, sw_batch_size, self.forward)
+        outputs = self.forward(images)
         loss = self.loss_function(outputs, labels)
         print("val loss",loss)
         self.log("val_loss",loss)
@@ -237,8 +245,8 @@ class Net(pytorch_lightning.LightningModule):
         )
         self.log("val_dice", mean_val_dice)
         self.log("val_loss", mean_val_loss)
-        makeshift_log.write("val_loss,"+str(mean_val_loss)+",\n")
-        makeshift_log.write("val_dice,"+str(mean_val_dice)+",\n")
+        # makeshift_log.write("val_loss,"+str(mean_val_loss)+",\n")
+        # makeshift_log.write("val_dice,"+str(mean_val_dice)+",\n")
         return {"log": tensorboard_logs}
 
 
@@ -274,5 +282,4 @@ trainer = pytorch_lightning.Trainer(
 )
 # train
 # print(net._model)
-os.system("nvidia-smi")
 trainer.fit(net)

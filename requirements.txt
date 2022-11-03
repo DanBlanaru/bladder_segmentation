@@ -1,5 +1,6 @@
-monai==1.0.1
-pytorch-lightning==1.7.7
-SimpleITK==2.2.0
+# monai
+# pytorch-lightning
+SimpleITK
+nibabel
 wandb
 # --extra-index-url https://download.pytorch.org/whl/cu113
