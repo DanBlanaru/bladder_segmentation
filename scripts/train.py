@@ -1,3 +1,4 @@
+from logging import root
 from monai.transforms.croppad.dictionary import DivisiblePadD
 import pytorch_lightning
 from pytorch_lightning.callbacks import ModelCheckpoint, checkpoint
@@ -34,6 +35,7 @@ from dataset import AMOSDataset
 
 print_config()
 
+# root_dir = ("/data/dan_blanaru/merged_AMOS_CTORG/")
 root_dir = ("/data/dan_blanaru/AMOS22_preprocessed/")
 makeshift_log = open(os.path.join(root_dir,'makeshift_log.csv'),'w')
 
@@ -42,6 +44,7 @@ print(root_dir)
 
 hparams = {
     "max_epochs":200,
+    "dataset_name":root_dir,
     "batch_size":4,
     "lr" : 1e-4,
     "using_rand_crop" : False,
@@ -49,7 +52,7 @@ hparams = {
 }
 
 class Net(pytorch_lightning.LightningModule):
-    def __init__(self,max_epochs,batch_size,lr,using_rand_crop):
+    def __init__(self,max_epochs,dataset_name,batch_size,lr,using_rand_crop):
         super().__init__()
         self._model = UNet(
             spatial_dims=3,
@@ -67,6 +70,7 @@ class Net(pytorch_lightning.LightningModule):
         self.best_val_dice = 0
         self.best_val_epoch = 0
         self.max_epochs = max_epochs
+        self.dataset_name = dataset_name
         self.batch_size = batch_size
         self.lr = lr
         self.using_rand_crop = using_rand_crop
@@ -139,8 +143,8 @@ class Net(pytorch_lightning.LightningModule):
             ]
         )
 
-
-        data_dir ="/data/dan_blanaru/AMOS22_preprocessed/"
+        print(f"Using {self.dataset_name}")
+        data_dir =self.dataset_name
         train_images = sorted(
             glob.glob(os.path.join(data_dir, "imagesTr", "*.nii.gz")))
         train_labels = sorted(
@@ -149,8 +153,9 @@ class Net(pytorch_lightning.LightningModule):
             {"image": image_name, "label": label_name}
             for image_name, label_name in zip(train_images, train_labels)
         ]
-        train_files, val_files = data_dicts[:160], data_dicts[160:]
-
+        
+        train_files, val_files = data_dicts[10:160], data_dicts[160:]
+        print(f"{len(train_files)} test items, {len(val_files)} validation items out of {len(data_dicts)} total")
         # we use cached datasets - these are 10x faster than regular datasets
         # self.train_ds = CacheDataset(
         #     data=train_files, transform=train_transforms,
@@ -193,7 +198,7 @@ class Net(pytorch_lightning.LightningModule):
         output = self.forward(images)
         loss = self.loss_function(output, labels)
 
-        outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
+        outputs = [self.post_pred(i) for i in decollate_batch(output)]
         labels = [self.post_label(i) for i in decollate_batch(labels)]
         self.dice_metric(y_pred = outputs,y = labels)
         mean_dice = self.dice_metric.aggregate().item()
@@ -272,7 +277,8 @@ val_dice_checkpoint = ModelCheckpoint(save_top_k=3, monitor="val_loss",every_n_e
 # initialise Lightning's trainer.
 
 trainer = pytorch_lightning.Trainer(
-    gpus=[0],
+    # gpus=[0],
+    # accelerator='cpu'
     max_epochs=hparams["max_epochs"],
     logger=wandb_logger,
     enable_checkpointing=True,

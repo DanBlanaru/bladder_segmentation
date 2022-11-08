@@ -1,5 +1,5 @@
-# monai
-# pytorch-lightning
+monai
+pytorch-lightning
 SimpleITK
 nibabel
 wandb

@@ -170,18 +170,6 @@ if copy_json:
     dataset_json['training'] = train_list_resampled
     dataset_json['numTraining'] = len(train_list_resampled)
     json.dump(dataset_json, open(json_target_path, 'w'))
-# todo:
-# load img and label side by side
-
-# count bladder pix in img
-# resize img
-# resize label
-# count bladder pix in label
-# if it's working, clean chrome tabs
-
-# crop img
-# crop label
-# count bladder pix in label
 
 
 # label_list = os.listdir(label_dir)

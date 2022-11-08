@@ -58,11 +58,11 @@ def create_bladder_voxels(label_img, bladder_indicator=14):
 
 raw_dir = "/data/dan_blanaru/original_data/CTORG/"
 # raw_dir = "//nas-vab.ifl/polyaxon/data1/dan_blanaru/original_data/CTORG/"
-processed_dir = "/data/dan_blanaru/CTORG_preprocessed/"
+processed_dir = "/data/dan_blanaru/CTORG_test_preprocessed/"
 # processed_dir = "//nas-vab.ifl/polyaxon/data1/dan_blanaru/CTORG_preprocessed/"
 
-raw_tr_dir = raw_dir + "volumes/train/"
-raw_label_dir = raw_dir + "labels/train/"
+raw_tr_dir = raw_dir + "volumes/test/"
+raw_label_dir = raw_dir + "labels/test/"
 
 processed_tr_dir = processed_dir + "imagesTr/"
 processed_label_dir = processed_dir + "labelsTr/"
@@ -98,7 +98,7 @@ if len(filenames_volume) != len(filenames_label):
     quit()
 
 for filename_volume, filename_label in zip(filenames_volume, filenames_label):
-    continue
+    
     print(filename_volume, end=',', flush=True)
 
     img_original = sitk.ReadImage(raw_tr_dir+filename_volume)
@@ -156,10 +156,12 @@ for filename_volume, filename_label in zip(filenames_volume, filenames_label):
         csv_file.write("\n")
 
 if create_json:
+    # new_filenames = os.listdir(processed_tr_dir)
     training_list = [{"image": f"./imagesTr/{filename}",
                       "label": f"./labelsTr/{filename}"} for filename in new_filenames]
     dataset_json = {"name": "CTORG",
+                    "num_training":len(training_list),
                     "training": training_list
                     }
-    json.dump(dataset_json,json_path)
+    json.dump(dataset_json,open(json_path,'w'))
 print("end")
