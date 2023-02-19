@@ -15,15 +15,15 @@ build:
 #     gpu:
 #       requests: 1
 #       limits: 1
-#   affinity:
-#     nodeAffinity:
-#       requiredDuringSchedulingIgnoredDuringExecution:
-#         nodeSelectorTerms:
-#           - matchExpressions:
-#               - key: kubernetes.io/hostname
-#                 operator: NotIn
-#                 values:
-#                   - kessel
+  # affinity:
+  #   nodeAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       nodeSelectorTerms:
+  #         - matchExpressions:
+  #             - key: kubernetes.io/hostname
+  #               operator: In
+  #               values:
+  #                 - kamino
           
 run:
   cmd:

@@ -272,7 +272,7 @@ wandb_logger.experiment.config.update(hparams)
 
 checkpoint_dir = os.path.join(root_dir,"checkpoints")
 val_loss_checkpoint = ModelCheckpoint(save_top_k=3, monitor="val_loss",every_n_epochs=2, dirpath=checkpoint_dir, filename="AMOS_{epoch:02d}_{global_step}_{val_loss}")
-val_dice_checkpoint = ModelCheckpoint(save_top_k=3, monitor="val_loss",every_n_epochs=2, dirpath=checkpoint_dir, filename="AMOS_{epoch:02d}_{global_step}_{val_dice}")
+val_dice_checkpoint = ModelCheckpoint(save_top_k=3, monitor="val_dice",every_n_epochs=2, dirpath=checkpoint_dir, filename="AMOS_{epoch:02d}_{global_step}_{val_dice}")
 
 # initialise Lightning's trainer.
 

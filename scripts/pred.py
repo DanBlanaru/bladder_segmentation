@@ -237,9 +237,9 @@ class Net(pytorch_lightning.LightningModule):
         return {"log": tensorboard_logs}
 
 
-# model_path = "/data/dan_blanaru/AMOS22_preprocessed/checkpoints/AMOS_epoch=151_global_step=0_val_dice=0.7325219511985779.ckpt"
+model_path = "//nas-vab.ifl/polyaxon/data1/dan_blanaru/AMOS22_preprocessed/checkpoints/AMOS_epoch=151_global_step=0_val_dice=0.7325219511985779.ckpt"
 # model_path = "/data/dan_blanaru/CTORG_preprocessed/checkpoints/AMOS_epoch=123_global_step=0_val_dice=0.6869893670082092.ckpt"
-model_path = "/data/dan_blanaru/merged_AMOS_CTORG/checkpoints/AMOS_epoch=65_global_step=0_val_dice=0.7527027726173401.ckpt"
+# model_path = "/data/dan_blanaru/merged_AMOS_CTORG/checkpoints/AMOS_epoch=65_global_step=0_val_dice=0.7527027726173401.ckpt"
 
 base_path_for_model = model_path.split('/')[3].split('_')[0]
 
@@ -269,7 +269,7 @@ test_transforms = Compose(
     ]
 )
 
-data_dir = "/data/dan_blanaru/presentation"
+data_dir = "//nas-vab.ifl/polyaxon/data1/dan_blanaru/presentation"
 
 
 def run_test(model, img_dir, label_dir, target_dir):
@@ -280,6 +280,7 @@ def run_test(model, img_dir, label_dir, target_dir):
         glob.glob(os.path.join(data_dir, label_dir, "*.nii.gz")))
     target_dir = os.path.join(data_dir, target_dir)
 
+    print([(i, ctorg_test_img_dir[i].split('/')[-1]) for i in range(len(ctorg_test_img_dir))])
     ctorg_data_dict = [
         {"image": image_name, "label": label_name}
         for image_name, label_name in zip(ctorg_test_img_dir, ctorg_test_label_dir)
@@ -294,7 +295,8 @@ def run_test(model, img_dir, label_dir, target_dir):
     dices = []
     id = 0
     print(img_dir)
-        
+    
+
     post_pred = Compose([EnsureType("tensor", device="cpu"), AsDiscrete(argmax=True, to_onehot=2)])
     post_label = Compose([EnsureType("tensor", device="cpu"), AsDiscrete(to_onehot=2)])
 
@@ -303,26 +305,33 @@ def run_test(model, img_dir, label_dir, target_dir):
         with torch.no_grad():
             output = (model.forward(img))
         
-        print(label.shape)
-        print(output.shape)
+        # print(label.shape)
+        # print(output.shape)
         output = [post_pred(i) for i in decollate_batch(output)]
         label = [post_label(i) for i in decollate_batch(label)]
-        print(label[0].shape)
-        print(output[0].shape)
+        # print(label[0].shape)
+        # print(output[0].shape)
         dice = dice_metric(y_pred=output, y = label)
-        print(dice)
         save_path = os.path.join(target_dir,f"{base_path_for_model}_{id}.nii.gz")
-        output = torch.permute(torch.argmax((output[0]), dim=0),(2,0,1))
+        output = torch.argmax((output[0]), dim=0).astype(dtype=torch.uint8)
         print("post argmax",output.shape)
-        # nifty_img = sitk.GetImageFromArray(output[0])
-        # nifty_img.SetSpacing(spacing)
-        # nifty_img.SetOrigin(origin)
-        # nifty_img.SetDirection(direction)
-        # sitk.WriteImage(nifty_img,save_path)
+
+        img_original = sitk.ReadImage(ctorg_test_img_dir[id])
+        print("original: ",sitk.GetArrayFromImage(img_original).shape)
+        spacing = img_original.GetSpacing()
+        origin = img_original.GetOrigin()
+        direction = img_original.GetDirection()
+
+        nifty_img = sitk.GetImageFromArray(output)
+        nifty_img.SetSpacing(spacing)
+        nifty_img.SetOrigin(origin)
+        nifty_img.SetDirection(direction)
+        sitk.WriteImage(nifty_img,save_path)
         print(id, dice)
         id = id+1
         dices.append(dice)
         dice_metric.reset()
+        print()
     
     print(f"Mean dice for {img_dir} is {torch.mean(torch.tensor(dices))}, std {torch.std(torch.tensor(dices))}")
 
@@ -331,14 +340,10 @@ def run_test(model, img_dir, label_dir, target_dir):
 model = Net.load_from_checkpoint(model_path)
 model.eval()
 
-img_original = sitk.ReadImage("/data/dan_blanaru/presentation/1_labels_ctorg/ctorg_0000.nii.gz")
-print(sitk.GetArrayFromImage(img_original).shape)
-spacing = img_original.GetSpacing()
-origin = img_original.GetOrigin()
-direction = img_original.GetDirection()
-run_test(model, "1_images_ctorg", "1_labels_ctorg", "1_preds_ctorg")
+
+# run_test(model, "1_images_ctorg", "1_labels_ctorg", "1_preds_ctorg")
 run_test(model, "2_images_inhouse","2_labels_inhouse","2_preds_inhouse")
-run_test(model,"3_images_amos","3_labels_amos","3_preds_amos")
+# run_test(model,"3_images_amos","3_labels_amos","3_preds_amos")
 
 # calc dice on ct-org -> mean and std
 # calc dice on amos -> mean and std

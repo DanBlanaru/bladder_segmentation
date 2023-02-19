@@ -56,21 +56,21 @@ def create_bladder_voxels(label_img, bladder_indicator=14):
     return bladder_voxels_img
 
 
-raw_dir = "/data/dan_blanaru/original_data/CTORG/"
+raw_dir = "/data/dan_blanaru/handlabelled_as_dataset/"
 # raw_dir = "//nas-vab.ifl/polyaxon/data1/dan_blanaru/original_data/CTORG/"
-processed_dir = "/data/dan_blanaru/CTORG_test_preprocessed/"
+processed_dir = "/data/dan_blanaru/presentation/"
 # processed_dir = "//nas-vab.ifl/polyaxon/data1/dan_blanaru/CTORG_preprocessed/"
 
-raw_tr_dir = raw_dir + "volumes/test/"
-raw_label_dir = raw_dir + "labels/test/"
+raw_tr_dir = raw_dir + "2_images_inhouse/"
+raw_label_dir = raw_dir + "2_labels_inhouse/"
 
-processed_tr_dir = processed_dir + "imagesTr/"
-processed_label_dir = processed_dir + "labelsTr/"
+processed_tr_dir = processed_dir + "2_images_inhouse/"
+processed_label_dir = processed_dir + "2_labels_inhouse/"
 
-csv_path = processed_dir + "resizing_logs.csv"
-json_path = processed_dir + "task1_dataset.json"
-create_log = True
-create_json = True
+# csv_path = processed_dir + "resizing_logs.csv"
+# json_path = processed_dir + "task1_dataset.json"
+create_log = False
+create_json = False
 
 
 if create_log:
@@ -105,7 +105,7 @@ for filename_volume, filename_label in zip(filenames_volume, filenames_label):
     label_original = sitk.ReadImage(raw_label_dir+filename_label)
     print("loaded", end=',')
     bladder_label_original = create_bladder_voxels(
-        label_original, bladder_indicator=2.0)
+        label_original, bladder_indicator=1.0)
 
     target_spacing = (2, 2, 5)
     img_resized = resampling_method(img_original, target_spacing)
@@ -117,8 +117,8 @@ for filename_volume, filename_label in zip(filenames_volume, filenames_label):
         continue
         # continue  # skip images with no bladder voxels
     print("processed", end=',')
-    index_nr = "0"+filename_volume[7:10]
-    new_filename = "ctorg_"+index_nr+".nii.gz"
+    index_nr = filename_volume.split('.')[0]
+    new_filename = index_nr+".nii.gz"
     new_filenames.append(new_filename)
     sitk.WriteImage(img_resized, processed_tr_dir+new_filename)
     sitk.WriteImage(bladder_label_resized, processed_label_dir+new_filename)
