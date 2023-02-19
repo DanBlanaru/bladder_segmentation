@@ -30,7 +30,7 @@ import tempfile
 import shutil
 import os
 import glob
-from dataset import AMOSDataset
+from utils import AMOSDataset
 
 
 print_config()
@@ -156,7 +156,7 @@ class Net(pytorch_lightning.LightningModule):
         
         train_files, val_files = data_dicts[10:160], data_dicts[160:]
         print(f"{len(train_files)} test items, {len(val_files)} validation items out of {len(data_dicts)} total")
-        # we use cached datasets - these are 10x faster than regular datasets
+        # cache datasets do not fit into memory with my setup
         # self.train_ds = CacheDataset(
         #     data=train_files, transform=train_transforms,
         #     cache_rate=1, num_workers=4,
@@ -208,16 +208,11 @@ class Net(pytorch_lightning.LightningModule):
         self.log("train_dice", mean_dice)
         self.log("train_loss", loss.item())
         print("train: ",loss)
-        # makeshift_log.write("train, "+str(loss.item())+",\n")
         
         return {"loss": loss, "log": tensorboard_logs}
 
     def validation_step(self, batch, batch_idx):
         images, labels = batch["image"], batch["label"]
-        # roi_size = (160, 160, 160)
-        # sw_batch_size = 4
-        # outputs = sliding_window_inference(
-        #     images, roi_size, sw_batch_size, self.forward)
         outputs = self.forward(images)
         loss = self.loss_function(outputs, labels)
         print("val loss",loss)
@@ -250,8 +245,6 @@ class Net(pytorch_lightning.LightningModule):
         )
         self.log("val_dice", mean_val_dice)
         self.log("val_loss", mean_val_loss)
-        # makeshift_log.write("val_loss,"+str(mean_val_loss)+",\n")
-        # makeshift_log.write("val_dice,"+str(mean_val_dice)+",\n")
         return {"log": tensorboard_logs}
 
 
@@ -277,8 +270,6 @@ val_dice_checkpoint = ModelCheckpoint(save_top_k=3, monitor="val_dice",every_n_e
 # initialise Lightning's trainer.
 
 trainer = pytorch_lightning.Trainer(
-    # gpus=[0],
-    # accelerator='cpu'
     max_epochs=hparams["max_epochs"],
     logger=wandb_logger,
     enable_checkpointing=True,
@@ -286,6 +277,4 @@ trainer = pytorch_lightning.Trainer(
     log_every_n_steps=10,
     callbacks=[val_dice_checkpoint,val_loss_checkpoint]
 )
-# train
-# print(net._model)
 trainer.fit(net)
