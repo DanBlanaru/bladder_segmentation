@@ -1,73 +1,19 @@
 import numpy as np
-import socket
+from utils import resampling_method,create_bladder_voxels
 import os
 import json
 import SimpleITK as sitk
-# import matplotlib.pyplot as plt
 np.set_printoptions(precision=4, suppress=True)
 
-# label_dir = '/data/dan_blanaru/preprocessed_data/CTORG/labelsTr'
-# label_dir = '../sample_img/'
-# label_dir = '\\\\nas-vab.ifl/polyaxon/data1/dan_blanaru/preprocessed_data/CTORG/labelsTr/' #running on local machine
-
-# csv_path = "..\sample_img\label_profile.csv"
-# file = open(csv_path,'w')
-# file.write('filename,nr_bladder_vox\n')
 
 
-def resampling_method(volume, new_spacing, interpolator=sitk.sitkLinear, default_value=0):
-    """
-    It resamples the original volume to have the voxel size equal to the desired one.
-    Parameters
-    ----------
-    volume: sitk image 
-        The original volume
-    new_spacing: numpy.array of float (i.e. [1.15, 1.30, 0.75])
-        The desired voxel size
-    Returns
-    ----------
-    sitk image
-        The input volume resampled with the desired voxel size
-    """
-    original_size = volume.GetSize()
-    original_spacing = volume.GetSpacing()
-    new_size = [int((original_size[0] - 1) * original_spacing[0] / new_spacing[0]),
-                int((original_size[1] - 1) *
-                    original_spacing[1] / new_spacing[1]),
-                int((original_size[2] - 1) * original_spacing[2] / new_spacing[2])]
-    # print(new_size)
-    new_volume = sitk.Resample(volume, new_size, sitk.Transform(), interpolator, volume.GetOrigin(),
-                               new_spacing, volume.GetDirection(), default_value, volume.GetPixelID())
-    return new_volume
 
+# raw_dir = "E://Guided Research/AMOS22/"
+# processed_dir = 'E://Guided Research/AMOS22_preprocessed/'
+raw_dir = "/data/dan_blanaru/AMOS22/"
+processed_dir = "/data/dan_blanaru/AMOS22_preprocessed/"
 
-def create_bladder_voxels(label_img, bladder_indicator=14):
-    # bladder indicator for amos is 14, for ctorg is is 2.0 (float)
-
-    # label_img = sitk.ReadImage(label_path)
-    label_array = sitk.GetArrayFromImage(label_img)
-
-    bladder_voxels = np.isclose(label_array, bladder_indicator)*1.0
-
-    bladder_voxels_img = sitk.GetImageFromArray(bladder_voxels)
-    bladder_voxels_img.SetSpacing(label_img.GetSpacing())
-    bladder_voxels_img.SetOrigin(label_img.GetOrigin())
-    bladder_voxels_img.SetDirection(label_img.GetDirection())
-    return bladder_voxels_img
-
-    ...
-
-
-if socket.gethostname() == 'DESKTOP-HROVR50':
-    # on local computer
-    raw_dir = "E://Guided Research/AMOS22/"
-    processed_dir = 'E://Guided Research/AMOS22_preprocessed/'
-
-else:
-    # on polyaxon
-    raw_dir = "/data/dan_blanaru/AMOS22/"
-    processed_dir = "/data/dan_blanaru/AMOS22_preprocessed/"
-
+#folder names for traub
 raw_tr_dir = raw_dir + "imagesTr/"
 processed_tr_dir = processed_dir + "imagesTr/"
 
@@ -79,7 +25,8 @@ raw_test_dir = raw_dir + "imagesTs/"
 csv_path = processed_dir+'resizing_logs.csv'
 
 
-create_log = True
+# this is just for debug/analysis purposes
+create_log = False
 if create_log:
     csv_file = open(csv_path, 'w')
     original_header = "nr_voxels_original,bladder_voxels_original,bladder_voxels_ratio_original,original_shape"
@@ -116,8 +63,8 @@ for filename_tuple in train_list:
     if sitk.GetArrayFromImage(bladder_label_resized).sum() == 0:
         print(filename_tuple, "WAS SKIPPED")
         continue
-        # continue  # skip images with no bladder voxels
-
+        #skip images with no bladder voxels
+ 
     sitk.WriteImage(img_resized, processed_tr_dir+filename)
     sitk.WriteImage(bladder_label_resized, processed_label_dir+filename)
 
@@ -170,34 +117,3 @@ if copy_json:
     dataset_json['training'] = train_list_resampled
     dataset_json['numTraining'] = len(train_list_resampled)
     json.dump(dataset_json, open(json_target_path, 'w'))
-
-
-# label_list = os.listdir(label_dir)
-# total_bladderless = 0
-# total_included = 0
-# for filename in label_list:
-#     if filename[:7] != "labels-":
-#         continue
-#     img = nib.load(os.path.join(label_dir,filename))
-#     img_data = img.get_fdata()
-
-#     bladder_indicator = 2.0
-#     new_data = np.isclose(img_data,bladder_indicator)
-#     nr_bladder_vox = new_data.sum()
-
-#     print(os.path.join(label_dir,filename), nr_bladder_vox)
-#     # file.write(f"{filename},{nr_bladder_vox}\n")
-#     print(f"{filename},{nr_bladder_vox}")
-#     if nr_bladder_vox == 0:
-#         total_bladderless = total_bladderless+1
-#     else:
-#         total_included = total_included + 1
-
-#     new_img = nib.Nifti1Image(new_data,img.affine,img.header)
-#     new_path = os.path.join(label_dir,('bladder'+filename))
-#     if nr_bladder_vox !=0:
-#         nib.save(new_img,new_path)
-# # file.write(f'total,{total_bladderless}')
-# # file.close()
-# print("total bladderless: ", total_bladderless)
-# print("total_included", total_included)
