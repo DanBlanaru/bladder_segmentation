@@ -29,7 +29,7 @@ run:
   cmd:
   # - python -u scripts/wandb_login.py
   # - python -u scripts/train.py
-  - python -u scripts/pred.py
+  # - python -u scripts/pred.py
   # - python -u scripts/experiments/min_example.py
-  # - python  -u scripts/resize_ctorg.py
-  # - python -u scripts/merge_amos_ctorg.py
+  # - python  -u scripts/resize_amos.py
+  - python -u scripts/merge_amos_ctorg.py
