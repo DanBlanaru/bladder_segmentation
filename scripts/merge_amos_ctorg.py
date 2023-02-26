@@ -10,7 +10,9 @@ import shutil
 amos_dir = "/data/dan_blanaru/AMOS22_preprocessed/"
 ctorg_dir = "/data/dan_blanaru/CTORG_preprocessed/"
 target_dir = "/data/dan_blanaru/merged_AMOS_CTORG/"
-
+# these are parameters that you should modify, since i kept them fixed i didn't pass them as arguments
+######################################################################################################
+os.makedirs(target_dir, exist_ok=True)
 json_amos = json.load(open(amos_dir+"task1_dataset.json", 'r'))
 json_ctorg = json.load(open(ctorg_dir+"task1_dataset.json", 'r'))
 
@@ -19,8 +21,11 @@ amos_training_list = json_amos['training']
 ctorg_training_list = json_ctorg['training']
 
 target_json = {
-    "name": "merge between CTORG and AMOS",
+    "name": "merged CTORG and AMOS",
     "description": f"the first {len(amos_training_list)} images are from AMOS, the rest {len(ctorg_training_list)} are from CTORG",
+    "tensorImageSize": "3D",
+    "modality": {"0": "CT"},
+    "labels": {"0": "background", "1": "bladder"},
     "numTraining": len(amos_training_list) + len(ctorg_training_list)
 }
 target_training_list = []
@@ -47,7 +52,6 @@ for path_pair in ctorg_training_list:
     shutil.copy(label_path, target_dir+"/labelsTr/"+new_filename)
     target_training_list.append({"image": f"./imagesTr/{new_filename}",
                                  "label": f"./labelsTr/{new_filename}"})
-    print(img_path + " -> " + "new_filename")
     index = index+1
 
 target_json['training'] = target_training_list
