@@ -20,7 +20,7 @@ It's just a python script you call before running the training, and it has two l
 `import os`
 `os.system("wandb login --relogin <your_token>")`
 With the logging I set up, your dashboard should look like this
-(wandb.PNG)
+![wandb_logs](wandb.PNG)
 
 ### resize_amos and resize_ctorg 
 Both do the preprocessing steps on the 3d volumes and their respective labels.
