@@ -32,7 +32,17 @@ import shutil
 import os
 import glob
 import SimpleITK as sitk
-from dataset import AMOSDataset
+
+
+
+model_path = "//nas-vab.ifl/polyaxon/data1/dan_blanaru/AMOS22_preprocessed/checkpoints/AMOS_epoch=151_global_step=0_val_dice=0.7325219511985779.ckpt"
+# model_path = "/data/dan_blanaru/CTORG_preprocessed/checkpoints/AMOS_epoch=123_global_step=0_val_dice=0.6869893670082092.ckpt"
+# model_path = "/data/dan_blanaru/merged_AMOS_CTORG/checkpoints/AMOS_epoch=65_global_step=0_val_dice=0.7527027726173401.ckpt"
+data_dir = "//nas-vab.ifl/polyaxon/data1/dan_blanaru/presentation"
+
+base_path_for_model = model_path.split('/')[3].split('_')[0]
+
+print(base_path_for_model)
 class Net(pytorch_lightning.LightningModule):
     def __init__(self,max_epochs,dataset_name,batch_size,lr,using_rand_crop):
         super().__init__()
@@ -237,18 +247,7 @@ class Net(pytorch_lightning.LightningModule):
         return {"log": tensorboard_logs}
 
 
-model_path = "//nas-vab.ifl/polyaxon/data1/dan_blanaru/AMOS22_preprocessed/checkpoints/AMOS_epoch=151_global_step=0_val_dice=0.7325219511985779.ckpt"
-# model_path = "/data/dan_blanaru/CTORG_preprocessed/checkpoints/AMOS_epoch=123_global_step=0_val_dice=0.6869893670082092.ckpt"
-# model_path = "/data/dan_blanaru/merged_AMOS_CTORG/checkpoints/AMOS_epoch=65_global_step=0_val_dice=0.7527027726173401.ckpt"
-
-base_path_for_model = model_path.split('/')[3].split('_')[0]
-
-print(base_path_for_model)
 dice_metric = DiceMetric(include_background=False, reduction="mean", get_not_nans=False)
-        
-# calc preds on ct-org test set
-# calc preds on amos (first 10 img)
-# calc preds on internal
 
 test_transforms = Compose(
     [
@@ -269,7 +268,6 @@ test_transforms = Compose(
     ]
 )
 
-data_dir = "//nas-vab.ifl/polyaxon/data1/dan_blanaru/presentation"
 
 
 def run_test(model, img_dir, label_dir, target_dir):
@@ -341,10 +339,6 @@ model = Net.load_from_checkpoint(model_path)
 model.eval()
 
 
-# run_test(model, "1_images_ctorg", "1_labels_ctorg", "1_preds_ctorg")
-run_test(model, "2_images_inhouse","2_labels_inhouse","2_preds_inhouse")
+run_test(model, "1_images_ctorg", "1_labels_ctorg", "1_preds_ctorg")
+# run_test(model, "2_images_inhouse","2_labels_inhouse","2_preds_inhouse")
 # run_test(model,"3_images_amos","3_labels_amos","3_preds_amos")
-
-# calc dice on ct-org -> mean and std
-# calc dice on amos -> mean and std
-# calc dice on merged -> mean and std

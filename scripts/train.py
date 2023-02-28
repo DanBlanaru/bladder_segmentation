@@ -35,9 +35,8 @@ from utils import AMOSDataset
 
 print_config()
 
-# root_dir = ("/data/dan_blanaru/merged_AMOS_CTORG/")
-root_dir = ("/data/dan_blanaru/AMOS22_preprocessed/")
-makeshift_log = open(os.path.join(root_dir,'makeshift_log.csv'),'w')
+root_dir = ("/data/dan_blanaru/merged_AMOS_CTORG/")
+# root_dir = ("/data/dan_blanaru/AMOS22_preprocessed/")
 
 print(root_dir)
 

@@ -10,26 +10,25 @@ build:
   - pip install -r requirements.txt
   - pip freeze
   # - pip install -r dummy_req.txt
-# environment:
-#   resources:
-#     gpu:
-#       requests: 1
-#       limits: 1
-  # affinity:
-  #   nodeAffinity:
-  #     requiredDuringSchedulingIgnoredDuringExecution:
-  #       nodeSelectorTerms:
-  #         - matchExpressions:
-  #             - key: kubernetes.io/hostname
-  #               operator: In
-  #               values:
-  #                 - kamino
+environment:
+  resources:
+    gpu:
+      requests: 1
+      limits: 1
+  affinity:
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: kubernetes.io/hostname
+                operator: In
+                values:
+                  - iego
           
 run:
   cmd:
-  # - python -u scripts/wandb_login.py
-  # - python -u scripts/train.py
+  - python -u scripts/wandb_login.py
+  - python -u scripts/train.py
   # - python -u scripts/pred.py
-  # - python -u scripts/experiments/min_example.py
   # - python  -u scripts/resize_amos.py
-  - python -u scripts/merge_amos_ctorg.py
+  # - python -u scripts/merge_amos_ctorg.py
