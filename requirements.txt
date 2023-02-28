@@ -1,0 +1,6 @@
+monai
+pytorch-lightning
+SimpleITK
+nibabel
+wandb
+# --extra-index-url https://download.pytorch.org/whl/cu113

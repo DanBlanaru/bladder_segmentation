@@ -1,0 +1,10 @@
+.ipynb_checkpoints
+__pycache__
+.polyaxon
+.polyaxonignore
+venv39
+dynunet_pipeline
+sample_folder
+scripts/wandb
+scripts/basic_unet
+scripts/wandb_login.py
